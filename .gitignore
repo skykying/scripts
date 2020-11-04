@@ -1,3 +1,5 @@
 /bin
 /rootfs_tar
 /toolchain
+*.img
+*.cfg

@@ -369,8 +369,6 @@ function select_board()
 	local val_list=$(list_subdir $LICHEE_TOOLS_DIR/pack/chips/$LICHEE_CHIP/configs | grep -v default)
 	local cfg_key="LICHEE_BOARD"
 	mk_select "$val_list" "$cfg_key"
-
-
 }
 
 function mkbr()
@@ -563,13 +561,14 @@ function mkkernel()
 
 function clkernel()
 {
+
+	mk_bar "clean kernel ..."
+
 	local clarg="clean"
 
 	if [ "x$1" == "xdistclean" ]; then
 		clarg="distclean"
 	fi
-
-	mk_bar "clean kernel ..."
 
 	local build_script="scripts/build.sh"
 

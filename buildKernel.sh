@@ -21,6 +21,11 @@ elif [ -n "${LICHEE_CROSS_COMPILER}" ]; then
     export CROSS_COMPILE="${LICHEE_CROSS_COMPILER}-"
 fi
 
+KERNEL_VERSION=`make -s kernelversion -C ./`
+LICHEE_KDIR=`pwd`
+LICHEE_MOD_DIR=${LICHEE_KDIR}/output/lib/modules/${KERNEL_VERSION}
+LICHEE_SDK_OUT_DIR=${LICHEE_KDIR}/../out/kernel/${KERNEL_VERSION}
+
 export AS=${CROSS_COMPILE}as
 export LD=${CROSS_COMPILE}ld
 export CC=${CROSS_COMPILE}gcc
@@ -31,17 +36,13 @@ export OBJCOPY=${CROSS_COMPILE}objcopy
 export OBJDUMP=${CROSS_COMPILE}objdump
 export LOCALVERSION=""
 export MKBOOTIMG=${LICHEE_TOOLS_DIR}/pack/pctools/linux/android/mkbootimg
-if [ "x$CCACHE_DIR" != "x" ];then
-	CCACHE_Y="ccache "
-fi
-
-KERNEL_VERSION=`make -s kernelversion -C ./`
-LICHEE_KDIR=`pwd`
-LICHEE_MOD_DIR=${LICHEE_KDIR}/output/lib/modules/${KERNEL_VERSION}
-LICHEE_SDK_OUT_DIR=${LICHEE_KDIR}/../out/kernel/${KERNEL_VERSION}
 
 export LICHEE_KDIR
 export LICHEE_SDK_OUT_DIR
+
+if [ "x$CCACHE_DIR" != "x" ];then
+    CCACHE_Y="ccache "
+fi
 
 #########################################################################################
 
@@ -63,7 +64,7 @@ update_kern_ver()
 show_help()
 {
     printf "
-    Build script for Lichee platform
+    Build script for sdk platform
 
     Invalid Options:
 
