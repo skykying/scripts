@@ -1,5 +1,6 @@
-# scripts/mkcmd.sh
+# scripts/mkconfig.sh
 #
+# tools/build/mkconfig.sh
 # (c) Copyright 2013
 # Allwinner Technology Co., Ltd. <www.allwinnertech.com>
 # James Deng <csjamesdeng@allwinnertech.com>

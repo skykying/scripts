@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+# kernel/scripts/buildKernel.sh
+
 ######################################################################################
 #Setup common variables
 export ARCH=arm

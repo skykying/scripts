@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# kernel/scripts/buildRootfs.sh
+
 set -e
 
 generate_rootfs()

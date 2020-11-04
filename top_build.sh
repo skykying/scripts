@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# tools/build/top_build.sh
+#
 # Description:
 # Allwinner compile tools usage
 # We follow below step:

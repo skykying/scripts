@@ -1,5 +1,7 @@
 # scripts/mkcmd.sh
 #
+# tools/build/buildinternal.sh
+
 # (c) Copyright 2013
 # Allwinner Technology Co., Ltd. <www.allwinnertech.com>
 # James Deng <csjamesdeng@allwinnertech.com>
