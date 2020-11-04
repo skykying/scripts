@@ -1,4 +1,4 @@
-# scripts/mkcmd.sh
+#!/bin/bash
 #
 # tools/build/buildinternal.sh
 
