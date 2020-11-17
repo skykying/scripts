@@ -783,7 +783,15 @@ function mk_br2020_rootfs()
 
 		export PATH=$PATH:${LICHEE_TOOLS_DIR}/build/bin
 		fakeroot chown	 -h -R 0:0	${ROOTFS}
-		fakeroot mke2img -d ${ROOTFS} -G 4 -R 1 -B 0 -I 0 -o ${LICHEE_PLAT_OUT}/rootfs.ext4
+		# 20480,   20K inode
+		# 1048576,  1M inode
+		# 102400,  100k inode
+
+		# 4194304 4G
+		# 1048576 1G
+		# 2097152 2G
+		# 3145728 3G
+		fakeroot mke2img -d ${ROOTFS} -G 4 -R 1 -B 3145728 -I 1048576 -o ${LICHEE_PLAT_OUT}/rootfs.ext4
 cat  > ${LICHEE_PLAT_OUT}/.rootfs << EOF
 chown -h -R 0:0 ${ROOTFS}
 ${LICHEE_TOOLS_DIR}/build/bin/mksquashfs \

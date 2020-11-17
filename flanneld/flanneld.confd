@@ -1,0 +1,35 @@
+###
+# flanneld config
+#
+# The following values are used to configure the flanneld
+#
+
+LOGPATH=/var/log/${RC_SVCNAME}
+FLANNELD_DIR=/var/lib/flanneld
+DOCKER_NETWORK_OPTIONS=""
+
+command_args="													\
+			--etcd-cafile=/etc/kubernetes/ssl/ca.pem 			\
+            --etcd-certfile=/etc/kubernetes/ssl/etcd.pem 		\
+            --etcd-keyfile=/etc/kubernetes/ssl/etcd-key.pem 	\
+            --etcd-endpoints=https://172.16.9.201:2379 			\
+            --etcd-prefix=/k8s.com/network 						\
+            --iface=eth0 										\
+            --ip-masq"
+
+
+command_args1="
+	--etcd-cafile=/etc/kubernetes/ssl/ca.pem 					\
+	--etcd-certfile=/etc/flanneld/ssl/flanneld.pem 				\
+	--etcd-keyfile=/etc/flanneld/ssl/flanneld-key.pem 			\
+	--etcd-endpoints=https://localhost:2379 					\
+	--etcd-prefix=/kubernetes/network"
+
+
+command_post="										\
+			/usr/share/flannel/mk-docker-opts.sh 	\
+            -k DOCKER_NETWORK_OPTIONS 				\
+            -d /run/flannel/docker"
+
+
+

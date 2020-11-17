@@ -1,0 +1,26 @@
+###
+# KUBE_PROXY config
+#
+# The following values are used to configure the KUBE_PROXY
+#
+# https://www.jianshu.com/p/2e1678b94f5a
+
+
+
+# 启用日志标准错误
+KUBE_LOGTOSTDERR="--logtostderr=true"
+# 日志级别
+KUBE_LOG_LEVEL="--v=4"
+# 自定义节点名称
+NODE_HOSTNAME="--hostname-override=<NODE_IP>"
+# API服务地址
+KUBE_MASTER="--master=http://<MASTER_IP>:8080"
+
+
+command_args="									\
+			${KUBE_LOGTOSTDERR} 				\
+			${KUBE_LOG_LEVEL} 					\
+			${NODE_HOSTNAME} 					\
+			${KUBE_MASTER}"
+
+# 

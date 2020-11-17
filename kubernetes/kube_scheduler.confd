@@ -1,0 +1,17 @@
+###
+# KUBE_SCHEDUER config
+#
+# The following values are used to configure the KUBE_SCHEDUER
+# https://www.jianshu.com/p/2e1678b94f5a
+
+
+KUBE_LOGTOSTDERR="--logtostderr=true"
+KUBE_LOG_LEVEL="--v=4"
+KUBE_MASTER="--master=http::/localhost:8080"
+KUBE_LEADER_ELECT="--leader-elect"
+
+command_args="				\
+	${KUBE_LOGTOSTDERR} 	\
+	${KUBE_LOG_LEVEL} 		\
+	${KUBE_MASTER} 			\
+	${KUBE_LEADER_ELECT}"

@@ -1,0 +1,31 @@
+#!/sbin/openrc-run
+# Copyright 2016 Alpine Linux
+# Distributed under the terms of the GNU General Public License v2
+# $Id$
+supervisor=supervise-daemon
+
+name="$RC_SVCNAME"
+description="Flanneld overlay address etcd agent"
+
+command=/usr/local/bin/flanneld
+command_args="${command_args}"
+: ${output_log:=$LOGPATH/$RC_SVCNAME.log}
+: ${error_log:=$LOGPATH/$RC_SVCNAME.log}
+
+command_user="root:flanneld"
+
+supervise_daemon_args="--chdir $FLANNELD_DIR"
+
+depend() {
+	need etcd
+	before docker
+}
+
+start_pre() {
+	checkpath -d -m 0775 -o "$command_user" "$LOGPATH"
+	checkpath -d -m 0700 -o "$command_user" "$FLANNELD_DIR"
+}
+
+start_post() {
+	/usr/share/flannel/mk-docker-opts.sh -k DOCKER_NETWORK_OPTIONS -d $FLANNELD_DIR
+}

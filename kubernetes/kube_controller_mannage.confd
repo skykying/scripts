@@ -1,0 +1,35 @@
+###
+# KUBE_CONTROLLER_MANAGER config
+#
+# The following values are used to configure the KUBE_CONTROLLER_MANAGER
+# 
+# https://www.jianshu.com/p/2e1678b94f5a
+
+KUBE_LOGTOSTDERR="--logtostderr=true"
+KUBE_LOG_LEVEL="--v=4"
+KUBE_MASTER="--master=localhost:8080"
+
+KUBE_CONTROLLER_MANAGER_ARGS="--bind-address=127.0.0.1 \     #监听地址
+    --allocate-node-cidrs=true \
+    --authentication-kubeconfig=/etc/kubernetes/auth/controller-manager.conf \
+    --authorization-kubeconfig=/etc/kubernetes/auth/controller-manager.conf \
+    --client-ca-file=/etc/kubernetes/pki/ca.crt \
+    --cluster-cidr=10.244.0.0/16 \    #如果使用flannel的网段
+    --cluster-signing-cert-file=/etc/kubernetes/pki/ca.crt \
+    --cluster-signing-key-file=/etc/kubernetes/pki/ca.key \
+    --controllers=*,bootstrapsigner,tokencleaner \
+    --kubeconfig=/etc/kubernetes/auth/controller-manager.conf \
+    --leader-elect=true \
+    --node-cidr-mask-size=24 \
+    --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt \
+    --root-ca-file=/etc/kubernetes/pki/ca.crt \
+    --service-account-private-key-file=/etc/kubernetes/pki/sa.key \
+    --use-service-account-credentials=true"
+
+
+command_args="                              \
+    ${KUBE_CONTROLLER_MANAGER_ARGS}         \
+    ${KUBE_LOGTOSTDERR}                     \
+    ${KUBE_LOG_LEVEL}                       \
+    ${KUBE_MASTER}                          \
+    ${KUBE_LEADER_ELECT}"

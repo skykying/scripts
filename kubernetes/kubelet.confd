@@ -1,0 +1,40 @@
+###
+# KUBELET config
+#
+# The following values are used to configure the KUBELET
+#
+# https://www.jianshu.com/p/2e1678b94f5a
+# 
+
+# 启用日志标准错误
+KUBE_LOGTOSTDERR="--logtostderr=true"
+# 日志级别
+KUBE_LOG_LEVEL="--v=4"
+# Kubelet服务IP地址
+NODE_ADDRESS="--address=<NODE_IP>"
+# Kubelet服务端口
+NODE_PORT="--port=10250"
+# 自定义节点名称
+NODE_HOSTNAME="--hostname-override=<NODE_IP>"
+# kubeconfig路径，指定连接API服务器
+KUBELET_KUBECONFIG="--kubeconfig=/etc/kubernetes/cfg/kubelet.kubeconfig"
+# 允许容器请求特权模式，默认false
+KUBE_ALLOW_PRIV="--allow-privileged=false"
+# DNS信息
+KUBELET_DNS_IP="--cluster-dns=10.10.10.2"
+KUBELET_DNS_DOMAIN="--cluster-domain=cluster.local"
+# 禁用使用Swap
+KUBELET_SWAP="--fail-swap-on=false"
+
+
+command_args="							\
+	${KUBE_LOGTOSTDERR} 				\
+	${KUBE_LOG_LEVEL} 					\
+	${NODE_ADDRESS} 					\
+	${NODE_PORT} 						\
+	${NODE_HOSTNAME} 					\
+	${KUBELET_KUBECONFIG} 				\
+	${KUBE_ALLOW_PRIV} 					\
+	${KUBELET_DNS_IP} 					\
+	${KUBELET_DNS_DOMAIN} 				\
+	${KUBELET_SWAP}"

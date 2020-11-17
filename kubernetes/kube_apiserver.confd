@@ -1,0 +1,33 @@
+###
+# KUBE_APISERVER config
+#
+# The following values are used to configure the KUBE_APISERVER
+# 
+# https://www.jianshu.com/p/2e1678b94f5a
+
+KUBE_LOGTOSTDERR="--logtostderr=true"
+# 日志级别
+KUBE_LOG_LEVEL="--v=4"
+# Etcd服务地址
+KUBE_ETCD_SERVERS="--etcd-servers=http://<MASTER_IP>:2379"
+# API服务监听地址
+KUBE_API_ADDRESS="--insecure-bind-address=0.0.0.0"
+# API服务监听端口
+KUBE_API_PORT="--insecure-port=8080"
+# 对集群中成员提供API服务地址
+KUBE_ADVERTISE_ADDR="--advertise-address=<MASTER_IP>"
+# 允许容器请求特权模式，默认false
+KUBE_ALLOW_PRIV="--allow-privileged=false"
+# 集群分配的IP范围
+KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range=10.10.10.0/24"
+
+
+command_args="						\
+	${KUBE_LOGTOSTDERR} 			\
+	${KUBE_LOG_LEVEL} 				\
+	${KUBE_ETCD_SERVERS} 			\
+	${KUBE_API_ADDRESS} 			\
+	${KUBE_API_PORT} 				\
+	${KUBE_ADVERTISE_ADDR} 			\
+	${KUBE_ALLOW_PRIV} 				\
+	${KUBE_SERVICE_ADDRESSES}"
