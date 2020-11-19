@@ -23,6 +23,7 @@ depend() {
 }
 
 start_pre() {
+	addgroup -S etcd 2>/dev/null
 	checkpath -d -m 0775 -o "$command_user" "$LOGPATH"
 	checkpath -d -m 0700 -o "$command_user" "$ETCD_DATA_DIR"
 }

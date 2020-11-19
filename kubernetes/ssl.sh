@@ -10,22 +10,28 @@ function generate_ssl_certificates {
     local organization="${3}"
     local csr_file="${service_name}-csr.json"
  
+ 	if [ ! -d /etc/kubernetes/ssl ]; then
+		mkdir -p /etc/kubernetes/ssl
+	fi
     cd /etc/kubernetes/ssl
  
 	cat > "${csr_file}" <<-EOF
 	{
-	    "CN": "CN",
+	    "CN": "${common_name}",
 	    "key": {
 	        "algo": "rsa",
 	        "size": 2048
 	    },
 	    "hosts": [
+	    	"$KUBE_MASTER_IP",
 	        "10.10.0.1",
 	        "10.10.0.2",
 	        "127.0.0.1",
-	        "kubernetes",
-	        "kubernetes.default",
-	        "kubernetes.default.svc",
+    		"kubernetes",
+    		"kubernetes.default",
+    		"kubernetes.default.svc",
+    		"kubernetes.default.svc.cluster",
+    		"kubernetes.default.svc.cluster.local",
 	        "$ALLOW_IPS"
 	    ],
 	    "names": [
