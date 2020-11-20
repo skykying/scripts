@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -x 
+# set -x 
+set -e 
 
 # https://www.cnblogs.com/fanqisoft/p/10765038.html
 # https://www.jianshu.com/p/214cfeb12ad3 手动部署kubernetes集群
@@ -8,29 +9,27 @@ set -x
 # https://www.yisu.com/zixun/9840.html (Extension apiserver)
 # https://lingxiankong.github.io/2018-09-18-kubelet-bootstrap-process.html
 
+[ -f common.sh ] && . common.sh
+
+# insmod /lib/modules/4.9.56/br_netfilter.ko
+
+# rc-service etcd restart 
+# rc-service docker restart
+# rc-service kube-apiserver restart
+# rc-service kube-controller-manager restart
+# rc-service kube-scheduler restart
+# rc-service kubelet restart
+# rc-service kube-proxy restart
+
 export KUBE_CLUSTER_NAME=$(hostname -s)
 export KUBE_MASTER_IP=$(ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d / -f 1)
-
-
-function install_packages {
-	apk update 
-
-	apk add docker docker-openrc
-	apk add cfssl iptables iptables-openrc
-	apk add kube-controller-manager-openrc kube-controller-manager
-	apk add kube-scheduler-openrc kube-scheduler
-	apk add kube-apiserver kube-apiserver-openrc
-	apk add kubectl  kubernetes lrzsz
-
-	apk add kubelet kube-proxy
-
-	rc-update add docker default
-}
 
 
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 function generate_docker_mirror {
+	mk_k8s_bar "generate docker mirror"
+
 	install -Dm755 -d /etc/docker
 	cat > /etc/docker/daemon.json <<EOF
 {
@@ -48,6 +47,8 @@ EOF
 # 系统配置初始化
 
 function generate_net_conf {
+
+	mk_k8s_bar "generate net conf"
 
 	cat > /etc/conf.d/kubernetes <<EOF
 net.ipv4.ip_forward = 1
@@ -75,17 +76,20 @@ EOF
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 function generate_system_conf {
+
+	mk_k8s_bar "generate system conf"
+
 	sed -i -r 's|^\S+\s+swap\s+swap.*|# &|' /etc/fstab
 	 
 	# modify the maxium number of files that can be opened by process
 	# to avoid the nginx process of 'nginx-ingress-controller'
 	# failed to set 'worker_rlimit_nofile' to '94520' in 0.12.0+
-	sed -i -r '/^\* (soft|hard) nofile/d' /etc/security/limits.conf
-	echo "* soft nofile 100000" >> /etc/security/limits.conf
-	echo "* hard nofile 200000" >> /etc/security/limits.conf
+	# sed -i -r '/^\* (soft|hard) nofile/d' /etc/security/limits.conf
+	# echo "* soft nofile 100000" >> /etc/security/limits.conf
+	# echo "* hard nofile 200000" >> /etc/security/limits.conf
 	 
-	rc-update del iptables
-	rc-service iptables stop
+	# rc-update del iptables
+	# rc-service iptables stop
 	 
 	# clean up the existed iptables rules.
 	iptables -F && iptables -F -t nat
@@ -96,6 +100,8 @@ function generate_system_conf {
 # nginx配置（我们使用nginx作为反向代理）
 
 function generate_nginx_configure {
+
+	mk_k8s_bar "generate nginx configure"
 
 	cat > /etc/conf.d/nginx <<-EOF
 net.core.netdev_max_backlog = 262144
@@ -118,6 +124,9 @@ EOF
 
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 function generate_ca_aggregator {
+
+	mk_k8s_bar "generate ca aggregator"
+
 	if [ ! -d /etc/kubernetes/ssl ]; then
 		mkdir -p /etc/kubernetes/ssl
 	fi
@@ -171,6 +180,8 @@ EOF
 
 
 function generate_ssl_aggregator {
+
+	mk_k8s_bar "generate ssl aggregator"
  
     local service_name="aggregator"
     local common_name="aggregator"
@@ -225,6 +236,9 @@ function generate_ssl_aggregator {
 # 初始化证书
 
 function generate_ca_certificates {
+
+	mk_k8s_bar "generate ca certificates"
+
 	if [ ! -d /etc/kubernetes/ssl ]; then
 		mkdir -p /etc/kubernetes/ssl
 	fi
@@ -288,6 +302,9 @@ EOF
 
 # 需要上一步的配置
 function generate_ssl_certificates {
+
+	mk_k8s_bar "generate ssl certificates"
+
     if [[ "$#" -ne 3 ]]; then
         return 1
     fi
@@ -344,6 +361,8 @@ function generate_ssl_certificates {
 # generate the certificate and private key of each services
 function generate_kubes_certificates {
 	
+	mk_k8s_bar "generate kubes certificates"
+
 	generate_ssl_certificates etcd etcd etcd
 	generate_ssl_certificates docker docker docker
 	generate_ssl_certificates kube-apiserver system:kube-apiserver system:kube-apiserver
@@ -371,6 +390,9 @@ function generate_kubes_certificates {
 
 
 function generate_kubelet_ssl {
+
+	mk_k8s_bar "generate kubelet ssl"
+
 	if [ ! -d /etc/kubernetes/ssl ]; then
 		mkdir -p /etc/kubernetes/ssl
 	fi
@@ -379,7 +401,7 @@ function generate_kubelet_ssl {
  
 	cat > kubelet-$(hostname).json <<-EOF
 {
-    "CN": "kubelet-client",
+    "CN": "system:node:$(hostname)",
     "hosts": [
         "$(hostname)",
         "127.0.0.1",
@@ -401,6 +423,8 @@ function generate_kubelet_ssl {
 }
 EOF
 # kubelet-localhost.json
+# kubectl create clusterrolebinding kubelet-role-binding --clusterrole=system:node --user=system:node:localhost
+# kubectl describe clusterrolebindings kubelet-role-binding
 
 	cfssl gencert 						\
       	-ca=ca.pem 						\
@@ -412,6 +436,8 @@ EOF
 }
 
 function kubelet_setup {
+
+	mk_k8s_bar "kubelet setup"
 
 		kubectl config set-cluster kubernetes \
 				--embed-certs=true \
@@ -433,15 +459,16 @@ function kubelet_setup {
 		kubectl config use-context default \
 				--kubeconfig="/etc/kubernetes/kubelet.kubeconfig"
 
-		kubectl create clusterrolebinding kubelet-admin \
-				--clusterrole=system:kubelet-api-admin \
-				--user="kubelet-client"
+		# kubectl create clusterrolebinding kubelet-admin --clusterrole=system:kubelet-api-admin --user="kubelet-client"
+		# kubectl create clusterrolebinding kubelet-admin --clusterrole=system:kubelet-api-admin --user="system:kubelet"
 }
 
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # 配置etcd
 
 function generate_etcd_conf {
+
+	mk_k8s_bar "generate etcd conf"
 
 	cat > /etc/etcd/conf.yml << EOF
 name: '$KUBE_CLUSTER_NAME'
@@ -451,12 +478,12 @@ snapshot-count: 10000
 heartbeat-interval: 100
 election-timeout: 1000
 quota-backend-bytes: 0
-listen-peer-urls: https://$KUBE_MASTER_IP:2381
+listen-peer-urls: https://$KUBE_MASTER_IP:2380
 listen-client-urls: 'https://$KUBE_MASTER_IP:2379,https://127.0.0.1:2379'
 max-snapshots: 5
 max-wals: 5
 cors:
-initial-advertise-peer-urls: https://$KUBE_MASTER_IP:2381
+initial-advertise-peer-urls: https://$KUBE_MASTER_IP:2380
 advertise-client-urls: https://$KUBE_MASTER_IP:2379
 discovery:
 discovery-fallback: 'proxy'
@@ -496,17 +523,25 @@ auto-compaction-retention: "1"
 EOF
 }
 
+
+function startup_etcd {
+	rc-service etcd restart -v
+}
+
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # 配置etcdctl
 #
 
 function build_etcdctl_command {
 
+	mk_k8s_bar "build etcdctl command"
+
 alias etcdctlv2='ETCDCTL_API=2 etcdctl \
-                   --endpoints=https://$KUBE_MASTER_IP:2380 \
+                   --endpoints=https://$KUBE_MASTER_IP:2381 \
                    --ca-file=/etc/kubernetes/ssl/ca.pem \
                    --cert-file=/etc/kubernetes/ssl/etcd.pem \
                    --key-file=/etc/kubernetes/ssl/etcd-key.pem'
+
 alias etcdctlv3='ETCDCTL_API=3 etcdctl \
                    --endpoints=https://$KUBE_MASTER_IP:2379 \
                    --cacert=/etc/kubernetes/ssl/ca.pem \
@@ -521,6 +556,9 @@ alias etcdctlv3='ETCDCTL_API=3 etcdctl \
 # Docker安装配置
 
 function generate_docker_conf {
+
+	mk_k8s_bar "generate docker conf"
+
 cat > "/etc/conf.d/docker" <<-EOF	
 DOCKER_OPTS=" $DOCKER_NETWORK_OPTIONS --data-root=/var/lib/docker \
 --host=tcp://$KUBE_MASTER_IP:2375 \
@@ -550,6 +588,9 @@ EOF
 # 1.Generating the data encryption config and key
 
 function confiure_kube_components {
+
+	mk_k8s_bar "confiure kube components"
+
 	encryption_key=$(head -c 32 /dev/urandom |base64)
 
 	mkdir -p /etc/kubernetes/
@@ -666,6 +707,9 @@ EOF
 # 安装配置master kube-apiserver
 
 function configure_kube_apiserver {
+
+	mk_k8s_bar "configure kube apiserver"
+
 	cat > "/etc/conf.d/kube-apiserver" <<-EOF
 ###
 # kubernetes system config
@@ -718,6 +762,9 @@ EOF
 # kubectl get roles -n kube-system extension-apiserver-authentication-reader
 
 function configure_kube_controller_manager {
+
+	mk_k8s_bar "configure kube controller manager"
+
 cat > "/etc/conf.d/kube-controller-manager" <<-EOF
 command_args=" \
 --allocate-node-cidrs=false \
@@ -753,6 +800,9 @@ EOF
 }
 
 function configure_kube_scheduler {
+
+	mk_k8s_bar "configure kube scheduler"
+
 cat > "/etc/conf.d/kube-scheduler" <<-EOF
 command_args=" --address=127.0.0.1 \
 --alsologtostderr=true \
@@ -775,6 +825,9 @@ EOF
 # kubectl create rolebinding -n kube-system ROLEBINDING_NAME --role=extension-apiserver-authentication-reader --serviceaccount=YOUR_NS:YOUR_SA
 
 function boot_kube_components {
+
+	mk_k8s_bar "boot kube components"
+
 	for svc in kube-{apiserver,controller-manager,scheduler}; do
 	    rc-update add ${svc} default
 	    rc-service  ${svc} start
@@ -789,6 +842,9 @@ export KUBECONFIG=/etc/kubernetes/admin.kubeconfig
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 function configure_kubelet {
+
+	mk_k8s_bar "configure kubelet"
+
 cat > "/etc/conf.d/kubelet" <<-EOF
 command_args=" --alsologtostderr=true \
 --client-ca-file=/etc/kubernetes/ssl/ca.pem \
@@ -827,7 +883,9 @@ EOF
 
 function configure_kube_proxy {
 
-cat > "/etc/conf.d/kube-proxy" <<-EOF
+	mk_k8s_bar "configure kube proxy"
+
+	cat > "/etc/conf.d/kube-proxy" <<-EOF
 command_args=" --alsologtostderr=true \
 --bind-address=$KUBE_MASTER_IP \
 --cluster-cidr=172.17.0.0/16 \
@@ -842,6 +900,9 @@ EOF
 }
 
 function boot_kubelet_proxy {
+
+	mk_k8s_bar "generate_ca_certificates"
+
 	for svc in {kube-proxy,kubelet}; do
 	    rc-update add ${svc} default
 	    rc-service  ${svc} start
@@ -854,23 +915,20 @@ function boot_kubelet_proxy {
 
 function configure_flannel {
 
-flannel_config=$(cat <<-EOF | python3
-import json
-conf = dict()
-conf['Network'] = '172.17.0.0/16'
-conf['SubnetLen'] = 24
-conf['Backend'] = {'Type': 'vxlan'}
-print(json.dumps(conf))
-EOF
-)
- 
+	mk_k8s_bar "configure flannel"
 
-etcdctl set /k8s.com/network/config "${flannel_config}"
- 
+
+ # rc-service flanneld restart -v 
+
+# etcdctlv3 put /k8s.com/network/config "${flannel_config}"
+# etcdctlv3 get /k8s.com/network/config
+
 # etcdctl get /awcloud.com/network/config
 # {"Backend": {"Type": "vxlan"}, "Network": "172.17.0.0/16", "SubnetLen": 24}
 
 cat > "/etc/conf.d/flanneld" <<-EOF
+LOGPATH=/var/log/flanneld
+FLANNELD_DIR=/var/lib/flanneld
 command_args=" -etcd-cafile=/etc/kubernetes/ssl/ca.pem \
 -etcd-certfile=/etc/kubernetes/ssl/etcd.pem \
 -etcd-keyfile=/etc/kubernetes/ssl/etcd-key.pem \
@@ -882,32 +940,75 @@ EOF
 
 }
 
+
+function setup_flannel {
+
+	mk_k8s_bar "setup flannel"
+
+flannel_config=$(cat <<-EOF | python3
+import json
+conf = dict()
+conf['Network'] = '172.17.0.0/16'
+conf['SubnetLen'] = 24
+conf['Backend'] = {'Type': 'vxlan'}
+print(json.dumps(conf))
+EOF
+)
+
+	_etcdctlv2='ETCDCTL_API=2 etcdctl \
+                   --endpoints=https://$KUBE_MASTER_IP:2379 \
+                   --ca-file=/etc/kubernetes/ssl/ca.pem \
+                   --cert-file=/etc/kubernetes/ssl/etcd.pem \
+                   --key-file=/etc/kubernetes/ssl/etcd-key.pem'
+	
+	 _etcdctlv3='ETCDCTL_API=3 etcdctl \
+                   --endpoints=https://$KUBE_MASTER_IP:2379 \
+                   --cacert=/etc/kubernetes/ssl/ca.pem \
+                   --cert=/etc/kubernetes/ssl/etcd.pem \
+                   --key=/etc/kubernetes/ssl/etcd-key.pem'
+
+	# etcdctlv3 put /k8s.com/network/config "${flannel_config}"
+	${_etcdctlv2} set /k8s.com/network/config "${flannel_config}"
+}
+
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-install_packages
-generate_docker_mirror
-generate_net_conf
-generate_system_conf
-generate_nginx_configure
 
-generate_ca_aggregator
-generate_ssl_aggregator
+function main {
+	mk_k8s_bar "setup begin "
 
-generate_ca_certificates
-generate_ssl_certificates
-generate_kubes_certificates
+	install_packages
+	generate_docker_mirror
+	generate_net_conf
+	generate_system_conf
+	generate_nginx_configure
 
-generate_kubelet_ssl
-kubelet_setup
+	generate_ca_aggregator
+	generate_ssl_aggregator
 
-generate_etcd_conf
-generate_docker_conf
+	generate_ca_certificates
+	generate_kubes_certificates
 
-confiure_kube_components
-configure_kube_apiserver
-configure_kube_controller_manager
-configure_kube_scheduler
-# boot_kube_components
+	generate_kubelet_ssl
+	kubelet_setup
 
-configure_kubelet
-configure_kube_proxy
-# boot_kubelet_proxy
+	generate_etcd_conf
+	generate_docker_conf
+
+	confiure_kube_components
+	configure_kube_apiserver
+	configure_kube_controller_manager
+	configure_kube_scheduler
+	# boot_kube_components
+
+	configure_kubelet
+	configure_kube_proxy
+	# boot_kubelet_proxy
+
+	configure_flannel
+	startup_etcd
+	setup_flannel
+
+	mk_k8s_bar "setup successful "
+}
+
+main 

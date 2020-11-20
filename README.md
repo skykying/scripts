@@ -25,7 +25,7 @@ rm arch/arm64/configs/sun50iw1p1smp_linux_vir_defconfig -rf; cp defconfig arch/a
 scp root@192.168.168.102:/mnt/sdb1/tulip-m64-2020-1-16/A81/tools/pack/sun50iw1p1_vir_vir_uart0.img .
 #######################################################################################################
 # 2020 11-09 17:19:10
-date 111820182020.10
+date 112008062020.10
 hwclock -w
 
 ulimit -SHn 65535
@@ -104,6 +104,8 @@ $(ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d / -f 1)
 9699328 
 
 
+docker rm $(docker ps -a -q)
+
 rc-service etcd restart 
 rc-service docker restart
 rc-service kube-apiserver restart
@@ -137,4 +139,19 @@ kubectl api-versions
 
 kubectl get node
 kubectl get csr
+
+kubectl get clusterrole
+kubectl get secret --all-namespaces
+
 kubectl describe clusterrole system:kubelet-api-admin
+kubectl describe events
+
+kubectl get clusterrolebinding system:node
+
+kubectl run crasher --image=alpine
+kubectl logs crasher
+kubectl describe crasher
+
+
+kubectl create clusterrolebinding kubelet-role-binding --clusterrole=system:node --user=system:node:localhost
+kubectl describe clusterrolebindings kubelet-role-binding
