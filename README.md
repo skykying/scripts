@@ -25,7 +25,7 @@ rm arch/arm64/configs/sun50iw1p1smp_linux_vir_defconfig -rf; cp defconfig arch/a
 scp root@192.168.168.102:/mnt/sdb1/tulip-m64-2020-1-16/A81/tools/pack/sun50iw1p1_vir_vir_uart0.img .
 #######################################################################################################
 # 2020 11-09 17:19:10
-date 112008062020.10
+date 112123592020.10
 hwclock -w
 
 ulimit -SHn 65535
@@ -84,9 +84,11 @@ cat > /etc/docker/daemon.json <<EOF
 }
 EOF
 
+
+"--pod-infra-container-image=hub.c.163.com/k8s163/pause-amd64:3.0"
+
 kubeadm config print init-defaults > kubeadm-config.yaml
 kubeadm init --config=kubeadm-config.yaml
-
 
 
 kubeadm init phase certs all
@@ -150,8 +152,23 @@ kubectl get clusterrolebinding system:node
 
 kubectl run crasher --image=alpine
 kubectl logs crasher
-kubectl describe crasher
+kubectl describe pod crasher
+kubectl get pod crasher -o yaml
+kubectl delete pod crasher
 
+kubectl run centos1 --image=centos:latest
+kubectl logs centos
+kubectl describe centos
+kubectl get pod centos -o yaml
 
 kubectl create clusterrolebinding kubelet-role-binding --clusterrole=system:node --user=system:node:localhost
 kubectl describe clusterrolebindings kubelet-role-binding
+
+
+kubectl taint node all node-role.kubernetes.io/master-
+
+kubectl label nodes localhost node-role.kubernetes.io/master=
+kubectl label nodes localhost node-role.kubernetes.io/master-
+
+
+kubectl get pod -o wide

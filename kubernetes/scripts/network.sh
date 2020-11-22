@@ -1,5 +1,7 @@
 #!/bin/bash
 
+[ -f common.sh ] &&  source common.sh
+
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # 安装配置flannel
 
@@ -45,18 +47,16 @@ print(json.dumps(conf))
 EOF
 )
 
-	_etcdctlv2='ETCDCTL_API=2 etcdctl \
-                   --endpoints=https://$KUBE_MASTER_IP:2379 \
-                   --ca-file=/etc/kubernetes/ssl/ca.pem \
-                   --cert-file=/etc/kubernetes/ssl/etcd.pem \
-                   --key-file=/etc/kubernetes/ssl/etcd-key.pem'
-	
-	 _etcdctlv3='ETCDCTL_API=3 etcdctl \
-                   --endpoints=https://$KUBE_MASTER_IP:2379 \
-                   --cacert=/etc/kubernetes/ssl/ca.pem \
-                   --cert=/etc/kubernetes/ssl/etcd.pem \
-                   --key=/etc/kubernetes/ssl/etcd-key.pem'
+	export ETCDCTL_API=2
 
-	# etcdctlv3 put /k8s.com/network/config "${flannel_config}"
-	${_etcdctlv2} set /k8s.com/network/config "${flannel_config}"
+	etcdctl --endpoints=https://$KUBE_MASTER_IP:2379 \
+   		--ca-file='/etc/kubernetes/ssl/ca.pem' \
+        --cert-file='/etc/kubernetes/ssl/etcd.pem' \
+        --key-file='/etc/kubernetes/ssl/etcd-key.pem' \
+        set '/k8s.com/network/config' "${flannel_config}"
+}
+
+
+function boot_flanneld {
+	rc-service flanneld restart -v 
 }

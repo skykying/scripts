@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+[ -f common.sh ] &&  source common.sh
 
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 # 安装配置master kube-apiserver
@@ -133,7 +133,7 @@ function boot_kube_components {
 	done
 }
 
-export KUBECONFIG=/etc/kubernetes/admin.kubeconfig
+# export KUBECONFIG=/etc/kubernetes/admin.kubeconfig
 # kubectl get node
 # kubectl get cs
 

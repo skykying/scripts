@@ -18,6 +18,7 @@ supervise_daemon_args="--chdir $FLANNELD_DIR"
 
 depend() {
 	need etcd
+	before docker
 }
 
 start_pre() {

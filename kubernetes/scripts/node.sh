@@ -1,5 +1,7 @@
 #!/bin/bash
 
+[ -f common.sh ] &&  source common.sh
+
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 function configure_kubelet {
@@ -23,7 +25,7 @@ command_args=" --alsologtostderr=true \
 --log-dir=/var/log/kubernetes \
 --log-flush-frequency=5s \
 --logtostderr=false \
---pod-infra-container-image=alpine:latest \
+--pod-infra-container-image='docker.io/mirrorgooglecontainers/pause-arm64:3.1' \
 --port=10250 \
 --read-only-port=10255 \
 --register-node=true \

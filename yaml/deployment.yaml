@@ -1,0 +1,24 @@
+deployment.yaml 
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: dfs-data-depl
+  namespace: default
+spec:
+  replicas: 0
+  template:
+    metadata:
+      labels:
+        k8s-app: dfs-data
+    spec:
+      nodeSelector: 
+        imgcloud/app: dfs-data
+      containers:
+      - name: dfs-data
+        image: centos:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 2101
+          hostPort: 2101
+        - containerPort: 3101
+          hostPort: 3101

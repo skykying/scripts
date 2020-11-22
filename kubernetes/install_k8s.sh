@@ -9,21 +9,19 @@ set -e
 # https://www.yisu.com/zixun/9840.html (Extension apiserver)
 # https://lingxiankong.github.io/2018-09-18-kubelet-bootstrap-process.html
 
-[ -f common.sh ] && . common.sh
+[ -f scripts/common.sh ] && . scripts/common.sh
+
 
 # insmod /lib/modules/4.9.56/br_netfilter.ko
 
 # rc-service etcd restart 
 # rc-service docker restart
+# rc-service flanneld restart
 # rc-service kube-apiserver restart
 # rc-service kube-controller-manager restart
 # rc-service kube-scheduler restart
 # rc-service kubelet restart
 # rc-service kube-proxy restart
-
-export KUBE_CLUSTER_NAME=$(hostname -s)
-export KUBE_MASTER_IP=$(ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d / -f 1)
-
 
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -471,7 +469,7 @@ function generate_etcd_conf {
 	mk_k8s_bar "generate etcd conf"
 
 	cat > /etc/etcd/conf.yml << EOF
-name: '$KUBE_CLUSTER_NAME'
+name: etcd0
 data-dir: /var/lib/etcd
 wal-dir:
 snapshot-count: 10000
@@ -703,273 +701,11 @@ EOF
 
 # kubectl create clusterrolebinding kubelet-admin --clusterrole=system:kubelet-api-admin --user=kubelet-client
 
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# 安装配置master kube-apiserver
+[ -f scripts/master.sh ] && . scripts/master.sh
 
-function configure_kube_apiserver {
+[ -f scripts/node.sh ] && . scripts/node.sh
 
-	mk_k8s_bar "configure kube apiserver"
-
-	cat > "/etc/conf.d/kube-apiserver" <<-EOF
-###
-# kubernetes system config
-#
-# The following values are used to configure the kube-apiserver
-#
-
-command_args=" \
---advertise-address=$KUBE_MASTER_IP \
---allow-privileged=true \
---alsologtostderr=true \
---apiserver-count=1 \
---authorization-mode=Node,RBAC \
---anonymous-auth=false \
---bind-address=$KUBE_MASTER_IP \
---client-ca-file=/etc/kubernetes/ssl/ca.pem \
---etcd-cafile=/etc/kubernetes/ssl/ca.pem \
---etcd-certfile=/etc/kubernetes/ssl/etcd.pem \
---etcd-keyfile=/etc/kubernetes/ssl/etcd-key.pem \
---etcd-prefix=/kubernetes \
---etcd-servers=https://$KUBE_MASTER_IP:2379 \
---event-ttl=1h \
---enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
---encryption-provider-config=/etc/kubernetes/encryption-config.yaml \
---kubelet-certificate-authority=/etc/kubernetes/ssl/ca.pem \
---kubelet-client-certificate=/etc/kubernetes/ssl/kube-apiserver.pem \
---kubelet-client-key=/etc/kubernetes/ssl/kube-apiserver-key.pem \
---log-dir=/var/log/kubernetes \
---log-flush-frequency=10s \
---logtostderr=false \
---runtime-config=api/all=true \
---secure-port=5443 \
---service-account-key-file=/etc/kubernetes/ssl/service-account.pem \
---service-cluster-ip-range=10.10.0.0/16 \
---service-node-port-range=30000-32767 \
---tls-cert-file=/etc/kubernetes/ssl/kube-apiserver.pem \
---tls-private-key-file=/etc/kubernetes/ssl/kube-apiserver-key.pem \
---v=4 \
---enable-aggregator-routing=true
---requestheader-client-ca-file=/etc/kubernetes/ssl/ca-agg.pem \
---requestheader-allowed-names="" \
---requestheader-extra-headers-prefix=X-Remote-Extra- \
---requestheader-group-headers=X-Remote-Group \
---requestheader-username-headers=X-Remote-User \
---proxy-client-cert-file=/etc/kubernetes/ssl/aggregator.pem \
---proxy-client-key-file=/etc/kubernetes/ssl/aggregator-key.pem"
-EOF
-}
-
-# kubectl get roles -n kube-system extension-apiserver-authentication-reader
-
-function configure_kube_controller_manager {
-
-	mk_k8s_bar "configure kube controller manager"
-
-cat > "/etc/conf.d/kube-controller-manager" <<-EOF
-command_args=" \
---allocate-node-cidrs=false \
---alsologtostderr=true \
---authentication-kubeconfig=/etc/kubernetes/kube-controller-manager.kubeconfig \
---authorization-kubeconfig=/etc/kubernetes/kube-controller-manager.kubeconfig \
---bind-address=127.0.0.1 \
---cluster-cidr=192.168.0.0/16 \
---cluster-name=kubernetes \
---cluster-signing-cert-file=/etc/kubernetes/ssl/ca.pem \
---cluster-signing-key-file=/etc/kubernetes/ssl/ca-key.pem \
---controller-start-interval=0 \
---kubeconfig=/etc/kubernetes/kube-controller-manager.kubeconfig \
---leader-elect=true \
---leader-elect-lease-duration=15s \
---leader-elect-renew-deadline=10s \
---leader-elect-retry-period=2s \
---log-dir=/var/log/kubernetes \
---log-flush-frequency=10s \
---logtostderr=false \
---node-cidr-mask-size=16 \
---node-monitor-grace-period=30s \
---node-monitor-period=3s \
---pod-eviction-timeout=30s \
---root-ca-file=/etc/kubernetes/ssl/ca.pem \
---service-account-private-key-file=/etc/kubernetes/ssl/service-account-key.pem \
---service-cluster-ip-range=10.10.0.0/16 \
---tls-cert-file=/etc/kubernetes/ssl/kube-controller-manager.pem \
---tls-private-key-file=/etc/kubernetes/ssl/kube-controller-manager-key.pem \
---use-service-account-credentials=true \
---v=4"
-EOF
-}
-
-function configure_kube_scheduler {
-
-	mk_k8s_bar "configure kube scheduler"
-
-cat > "/etc/conf.d/kube-scheduler" <<-EOF
-command_args=" --address=127.0.0.1 \
---alsologtostderr=true \
---bind-address=127.0.0.1 \
---authentication-kubeconfig=/etc/kubernetes/kube-scheduler.kubeconfig \
---authorization-kubeconfig=/etc/kubernetes/kube-scheduler.kubeconfig \
---kubeconfig=/etc/kubernetes/kube-scheduler.kubeconfig \
---leader-elect=true \
---leader-elect-lease-duration=15s \
---leader-elect-renew-deadline=10s \
---leader-elect-retry-period=2s \
---log-dir=/var/log/kubernetes \
---log-flush-frequency=10s \
---logtostderr=false \
---tls-cert-file=/etc/kubernetes/ssl/kube-scheduler.pem \
---tls-private-key-file=/etc/kubernetes/ssl/kube-scheduler-key.pem \
---v=4"
-EOF
-}
-# kubectl create rolebinding -n kube-system ROLEBINDING_NAME --role=extension-apiserver-authentication-reader --serviceaccount=YOUR_NS:YOUR_SA
-
-function boot_kube_components {
-
-	mk_k8s_bar "boot kube components"
-
-	for svc in kube-{apiserver,controller-manager,scheduler}; do
-	    rc-update add ${svc} default
-	    rc-service  ${svc} start
-	done
-}
-
-export KUBECONFIG=/etc/kubernetes/admin.kubeconfig
-# kubectl get node
-# kubectl get cs
-
-
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-function configure_kubelet {
-
-	mk_k8s_bar "configure kubelet"
-
-cat > "/etc/conf.d/kubelet" <<-EOF
-command_args=" --alsologtostderr=true \
---client-ca-file=/etc/kubernetes/ssl/ca.pem \
---cluster-dns=10.10.0.2 \
---cluster-domain=k8s.local \
---docker-tls \
---docker-tls-ca=/etc/kubernetes/ssl/ca.pem \
---docker-tls-cert=/etc/kubernetes/ssl/docker.pem \
---docker-tls-key=/etc/kubernetes/ssl/docker-key.pem \
---fail-swap-on=true \
---healthz-port=10248 \
---hostname-override= \
---image-pull-progress-deadline=30m \
---kubeconfig=/etc/kubernetes/kubelet.kubeconfig \
---log-dir=/var/log/kubernetes \
---log-flush-frequency=5s \
---logtostderr=false \
---pod-infra-container-image=alpine:latest \
---port=10250 \
---read-only-port=10255 \
---register-node=true \
---root-dir=/var/lib/kubelet \
---runtime-request-timeout=10m \
---serialize-image-pulls=false \
---tls-cert-file=/etc/kubernetes/ssl/kubelet-$(hostname).pem \
---tls-private-key-file=/etc/kubernetes/ssl/kubelet-$(hostname)-key.pem \
---v=4"
-EOF
-
-}
-
-# kubectl get node
-
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# 安装配置node kube-proxy
-
-function configure_kube_proxy {
-
-	mk_k8s_bar "configure kube proxy"
-
-	cat > "/etc/conf.d/kube-proxy" <<-EOF
-command_args=" --alsologtostderr=true \
---bind-address=$KUBE_MASTER_IP \
---cluster-cidr=172.17.0.0/16 \
---hostname-override= \
---kubeconfig=/etc/kubernetes/kube-proxy.kubeconfig \
---log-dir=/var/log/kubernetes \
---log-flush-frequency=5s \
---logtostderr=false \
---proxy-mode=iptables \
---v=4"
-EOF
-}
-
-function boot_kubelet_proxy {
-
-	mk_k8s_bar "generate_ca_certificates"
-
-	for svc in {kube-proxy,kubelet}; do
-	    rc-update add ${svc} default
-	    rc-service  ${svc} start
-	done
-}
-# kubectl get node
-
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# 安装配置flannel
-
-function configure_flannel {
-
-	mk_k8s_bar "configure flannel"
-
-
- # rc-service flanneld restart -v 
-
-# etcdctlv3 put /k8s.com/network/config "${flannel_config}"
-# etcdctlv3 get /k8s.com/network/config
-
-# etcdctl get /awcloud.com/network/config
-# {"Backend": {"Type": "vxlan"}, "Network": "172.17.0.0/16", "SubnetLen": 24}
-
-cat > "/etc/conf.d/flanneld" <<-EOF
-LOGPATH=/var/log/flanneld
-FLANNELD_DIR=/var/lib/flanneld
-command_args=" -etcd-cafile=/etc/kubernetes/ssl/ca.pem \
--etcd-certfile=/etc/kubernetes/ssl/etcd.pem \
--etcd-keyfile=/etc/kubernetes/ssl/etcd-key.pem \
--etcd-endpoints=https://$KUBE_MASTER_IP:2379 \
--etcd-prefix=/k8s.com/network \
--iface=eth0 \
--ip-masq"
-EOF
-
-}
-
-
-function setup_flannel {
-
-	mk_k8s_bar "setup flannel"
-
-flannel_config=$(cat <<-EOF | python3
-import json
-conf = dict()
-conf['Network'] = '172.17.0.0/16'
-conf['SubnetLen'] = 24
-conf['Backend'] = {'Type': 'vxlan'}
-print(json.dumps(conf))
-EOF
-)
-
-	_etcdctlv2='ETCDCTL_API=2 etcdctl \
-                   --endpoints=https://$KUBE_MASTER_IP:2379 \
-                   --ca-file=/etc/kubernetes/ssl/ca.pem \
-                   --cert-file=/etc/kubernetes/ssl/etcd.pem \
-                   --key-file=/etc/kubernetes/ssl/etcd-key.pem'
-	
-	 _etcdctlv3='ETCDCTL_API=3 etcdctl \
-                   --endpoints=https://$KUBE_MASTER_IP:2379 \
-                   --cacert=/etc/kubernetes/ssl/ca.pem \
-                   --cert=/etc/kubernetes/ssl/etcd.pem \
-                   --key=/etc/kubernetes/ssl/etcd-key.pem'
-
-	# etcdctlv3 put /k8s.com/network/config "${flannel_config}"
-	${_etcdctlv2} set /k8s.com/network/config "${flannel_config}"
-}
+[ -f scripts/network.sh ] && . scripts/network.sh
 
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -977,6 +713,12 @@ function main {
 	mk_k8s_bar "setup begin "
 
 	install_packages
+
+	install_etcd
+	install_docker
+	install_flanneld
+	install_kubernetes
+
 	generate_docker_mirror
 	generate_net_conf
 	generate_system_conf
@@ -998,17 +740,28 @@ function main {
 	configure_kube_apiserver
 	configure_kube_controller_manager
 	configure_kube_scheduler
-	# boot_kube_components
 
 	configure_kubelet
 	configure_kube_proxy
-	# boot_kubelet_proxy
-
+	
 	configure_flannel
-	startup_etcd
-	setup_flannel
 
 	mk_k8s_bar "setup successful "
 }
 
-main 
+function setup_all {
+	startup_etcd
+	setup_flannel
+}
+
+function boot_all {
+	boot_flanneld
+	boot_kube_components
+	boot_kubelet_proxy
+}
+
+function setup_roles {
+	kubectl create clusterrolebinding kubelet-role-binding --clusterrole=system:node --user=system:node:localhost
+}
+
+# main
